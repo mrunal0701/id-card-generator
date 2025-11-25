@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI ID Card Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html {
+      scroll-behavior: smooth;
+    }
+    /* Floating animation for cards */
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    .float {
+      animation: float 4s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans">
+  <!-- Navbar -->
+  <nav class="bg-white shadow-md fixed w-full top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-blue-600">AI ID Card Generator</h1>
+      <ul class="hidden md:flex space-x-8 text-gray-600 font-medium">
+        <li><a href="/" class="hover:text-blue-600 transition">Home</a></li>
+        <li><a href="/login" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition">Login</a></li>
+      </ul>
+      <div class="md:hidden">
+        <button id="menu-btn" class="text-gray-600 hover:text-blue-600 focus:outline-none">☰</button>
+      </div>
+    </div>
+    <!-- Mobile Menu -->
+    <div id="mobile-menu" class="hidden bg-white md:hidden shadow-inner">
+      <a href="#home" class="block px-6 py-2 hover:bg-gray-100">Home</a>
+      <a href="/login" class="block px-6 py-2 text-blue-600 font-semibold">Login</a>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section id="home" class="pt-32 pb-20 text-center px-6 bg-gradient-to-b from-blue-50 to-white">
+    <h2 class="text-4xl md:text-5xl font-extrabold text-blue-600 mb-4 animate-pulse">
+      Create Stunning ID Cards with AI ⚡
+    </h2>
+    <p class="max-w-2xl mx-auto text-gray-600 mb-8 text-lg leading-relaxed">
+      Design professional ID cards in seconds! Upload details, choose a modern template, and let our AI handle the rest.
+      Perfect for schools, companies, and events.
+    </p>
+    <a href="/login" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition transform hover:scale-105">
+      Get Started Now
+    </a>
+  </section>
+
+  <!-- About Section -->
+  <section class="py-16 px-6 bg-white text-center">
+    <h3 class="text-3xl font-bold text-blue-600 mb-8">Why Choose Our Generator?</h3>
+    <div class="max-w-6xl mx-auto grid md:grid-cols-3 gap-10">
+      <div class="p-6 bg-blue-50 rounded-xl shadow-lg hover:shadow-2xl transition float">
+        <h4 class="text-xl font-semibold text-blue-600 mb-2">AI-Powered Design</h4>
+        <p class="text-gray-600">Our smart engine automatically optimizes layout, font, and colors to create perfectly balanced ID cards.</p>
+      </div>
+      <div class="p-6 bg-blue-50 rounded-xl shadow-lg hover:shadow-2xl transition float" style="animation-delay: 1s;">
+        <h4 class="text-xl font-semibold text-blue-600 mb-2">Multiple Templates</h4>
+        <p class="text-gray-600">Choose from a variety of creative templates for students, professionals, or corporate employees.</p>
+      </div>
+      <div class="p-6 bg-blue-50 rounded-xl shadow-lg hover:shadow-2xl transition float" style="animation-delay: 2s;">
+        <h4 class="text-xl font-semibold text-blue-600 mb-2">Instant Download</h4>
+        <p class="text-gray-600">Generate, preview, and download your card in seconds. Print-ready and high-resolution.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="bg-blue-600 py-20 text-white text-center">
+    <h3 class="text-3xl font-bold mb-8">How It Works</h3>
+    <div class="max-w-5xl mx-auto grid md:grid-cols-3 gap-10">
+      <div class="p-6 bg-blue-500 rounded-xl shadow-md hover:shadow-2xl transition transform hover:-translate-y-2">
+        <span class="text-4xl font-bold block mb-3">1️⃣</span>
+        <h4 class="text-xl font-semibold mb-2">Enter Your Details</h4>
+        <p>Provide name, ID number, department, and photo to personalize your card.</p>
+      </div>
+      <div class="p-6 bg-blue-500 rounded-xl shadow-md hover:shadow-2xl transition transform hover:-translate-y-2">
+        <span class="text-4xl font-bold block mb-3">2️⃣</span>
+        <h4 class="text-xl font-semibold mb-2">Choose Template</h4>
+        <p>Pick from our gallery of professional, AI-optimized ID card templates.</p>
+      </div>
+      <div class="p-6 bg-blue-500 rounded-xl shadow-md hover:shadow-2xl transition transform hover:-translate-y-2">
+        <span class="text-4xl font-bold block mb-3">3️⃣</span>
+        <h4 class="text-xl font-semibold mb-2">Download Instantly</h4>
+        <p>Generate and download your ID card in seconds — print-ready and stylish.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Call to Action -->
+  <section class="py-20 text-center bg-white">
+    <h3 class="text-3xl font-bold text-blue-600 mb-6">Ready to Create Your ID?</h3>
+    <p class="text-gray-600 mb-8">Join thousands who design their cards effortlessly using our AI-powered platform.</p>
+    <a href="/login" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-semibold text-lg transition transform hover:scale-105">
+      Start Designing
+    </a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-gray-100 py-6 text-center text-gray-600 mt-10 border-t">
+    <p>© 2025 AI ID Card Generator | Developed with ❤️</p>
+  </footer>
+
+  <!-- JS for Mobile Menu -->
+  <script>
+    const btn = document.getElementById("menu-btn");
+    const menu = document.getElementById("mobile-menu");
+    btn.addEventListener("click", () => menu.classList.toggle("hidden"));
+  </script>
+</body>
+</html>

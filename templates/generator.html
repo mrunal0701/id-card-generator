@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Instant ID Card Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+    }
+
+    input, select, textarea {
+      transition: all 0.3s ease-in-out;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
+      outline: none;
+    }
+
+    .id-card-container {
+      width: 320px;
+      height: 200px;
+      transition: transform 0.3s;
+    }
+    .id-card-container:hover {
+      transform: scale(1.02);
+    }
+
+    #id-photo {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border: 2px solid white;
+    }
+  </style>
+</head>
+
+<body class="flex flex-col min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 text-gray-800">
+
+  <!--  Navbar -->
+  <nav class="bg-gradient-to-r from-indigo-700 via-blue-700 to-cyan-600 text-white shadow-md">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center px-6 py-3">
+      <h1 class="text-lg sm:text-2xl font-bold ">AI ID Card Generator</h1>
+       
+      <div class="flex items-center gap-3 mt-2 sm:mt-0">
+        <p class="text-sm sm:text-base">
+          Logged in as <span class="font-semibold text-yellow-300">{{ username }}</span>
+        </p>
+        <a href="{{ url_for('logout') }}" class="text-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-md transition duration-200">Logout</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="flex-grow max-w-6xl mx-auto px-4 sm:px-8 py-10 space-y-10">
+
+    <div class="flex flex-col lg:flex-row gap-10">
+      
+      <!-- Left Panel -->
+      <div class="lg:w-1/2 p-6 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200">
+        <h2 class="text-xl font-semibold mb-6 text-indigo-700 border-b pb-3">1. Enter Details</h2>
+
+        <form id="id-card-form" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-600">Full Name</label>
+            <input type="text" id="name" placeholder="E.g., Jane D. Doe" class="mt-1 w-full p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white" required />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-600">ID / Employee No.</label>
+            <input type="text" id="id-number" placeholder="E.g., EMP-1098" class="mt-1 w-full p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white" required />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-600">Title / Designation</label>
+            <input type="text" id="title" placeholder="E.g., Software Engineer" class="mt-1 w-full p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white" required />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-600">Department / Organization</label>
+            <input type="text" id="department" placeholder="E.g., Tech Solutions Inc." class="mt-1 w-full p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white" required />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-600">Valid Until</label>
+            <input type="text" id="valid-until" placeholder="E.g., 12/31/2025" class="mt-1 w-full p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white" required />
+          </div>
+
+          <div class="pt-4">
+            <label for="photo-upload" class="block text-sm font-medium text-gray-600 mb-2">Passport Photo</label>
+            <input type="file" id="photo-upload" accept="image/*" class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+          </div>
+        </form>
+
+        <div class="mt-8 border-t pt-6">
+          <h2 class="text-lg font-semibold mb-4 text-indigo-700">2. Choose Template</h2>
+          <div id="template-options" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+        </div>
+      </div>
+
+      <!-- Right Panel -->
+      <div class="lg:w-1/2 p-6 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 flex flex-col items-center justify-start">
+        <h2 class="text-xl font-semibold mb-6 text-indigo-700 border-b pb-3 w-full">3. Preview & Download</h2>
+
+        <div id="id-card-to-capture" class="id-card-container rounded-xl flex flex-col p-4 shadow-lg">
+          <div id="id-card-header" class="flex justify-between items-center pb-2 border-b border-white/30 mb-2">
+            <h3 id="card-organization" class="text-lg font-bold text-white">ORGANIZATION NAME</h3>
+            <svg id="card-logo" class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+          </div>
+
+          <div class="flex-grow flex items-center justify-between">
+            <div class="flex items-start gap-3">
+              <img id="id-photo" src="https://placehold.co/80x80/ffffff/333333?text=Photo" alt="User Photo" class="rounded-full" />
+              <div class="text-white">
+                <p id="card-name" class="text-xl font-extrabold leading-tight">FULL NAME</p>
+                <p id="card-title" class="text-sm opacity-90">Designation / Title</p>
+                <p id="card-id" class="text-xs mt-1">ID: <span class="font-semibold">ID-NUMBER</span></p>
+              </div>
+            </div>
+            <div id="qrcode-container" class="w-16 h-16 bg-white p-1 rounded-md shadow-inner"></div>
+          </div>
+
+          <div class="pt-2 text-xs text-white text-right border-t border-white/30 mt-2">
+            <p class="font-medium">Valid Until: <span id="card-valid-until" class="font-bold">12/31/2025</span></p>
+          </div>
+        </div>
+
+        <p id="download-message" class="text-sm mt-4 text-center font-medium hidden"></p>
+
+        <button id="download-pdf-btn" class="mt-5 w-full sm:w-auto px-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition transform hover:scale-[1.02] flex items-center justify-center gap-2">
+          <span id="download-text">Download ID Card & Save Data</span>
+          <span id="loading-spinner" class="hidden h-5 w-5 border-4 border-t-4 border-indigo-200 border-t-white rounded-full animate-spin"></span>
+        </button>
+      </div>
+    </div>
+  </main>
+
+
+
+    <!-- Footer -->
+  <footer class="bg-gradient-to-r from-indigo-700 via-blue-700 to-cyan-600 py-6 text-center text-gray-100 mt-10 border-t">
+    <p>© 2025 AI ID Card Generator | Developed with ❤️ by Taniya & Kapish</p>
+  </footer>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
+    <script>
+        // --- Core Logic ---
+
+        const cardTemplates = {
+            // Using 3 professional templates 
+            'Corporate Blue': { key: 'blue', bg: 'bg-gradient-to-br from-blue-900 to-blue-600', text: 'text-white' },
+            'Vibrant Green': { key: 'green', bg: 'bg-gradient-to-br from-green-700 to-teal-500', text: 'text-white' },
+            'Modern Dark': { key: 'dark', bg: 'bg-gradient-to-br from-gray-800 to-gray-600', text: 'text-white' },
+            // Additional templates for more options
+            
+            'Clean Gray': { key: 'white', bg: 'bg-gradient-to-br from-gray-500 to-gray-700', text: 'text-white' },
+            'Classic Red': { key: 'red', bg: 'bg-gradient-to-br from-red-700 to-pink-500', text: 'text-white' },
+        };
+
+        const form = document.getElementById('id-card-form');
+        const cardToCapture = document.getElementById('id-card-to-capture');
+        const photoUpload = document.getElementById('photo-upload');
+        const downloadBtn = document.getElementById('download-pdf-btn');
+        const downloadText = document.getElementById('download-text');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const downloadMessage = document.getElementById('download-message');
+        const templateOptions = document.getElementById('template-options');
+        
+        const nameInput = document.getElementById('name');
+        const idNumberInput = document.getElementById('id-number');
+        const titleInput = document.getElementById('title');
+        const departmentInput = document.getElementById('department');
+        const validUntilInput = document.getElementById('valid-until');
+        
+        let currentTemplateKey = 'Corporate Blue';
+        let currentTemplate = cardTemplates[currentTemplateKey];
+let qrcode = null;
+
+        /**
+         * Renders the template options buttons and attaches click listeners.
+         */
+        function renderTemplates() {
+            templateOptions.innerHTML = '';
+            Object.keys(cardTemplates).forEach(key => {
+                const template = cardTemplates[key];
+                const button = document.createElement('button');
+                
+                button.className = `w-full h-10 rounded-lg shadow-md transition duration-200 hover:opacity-80 focus:ring-4 focus:ring-offset-2 ${template.bg} ${template.text}`;
+                button.innerHTML = `<span class="capitalize text-xs">${key}</span>`;
+                button.dataset.templateKey = key;
+                
+                if (key === currentTemplateKey) {
+                    button.classList.add('ring-4', 'ring-blue-500', 'ring-offset-2');
+                }
+
+                button.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    currentTemplateKey = e.currentTarget.dataset.templateKey;
+                    currentTemplate = cardTemplates[currentTemplateKey];
+                    updatePreview();
+                    
+                    document.querySelectorAll('#template-options button').forEach(btn => {
+                        btn.classList.remove('ring-4', 'ring-blue-500', 'ring-offset-2');
+                    });
+                    e.currentTarget.classList.add('ring-4', 'ring-blue-500', 'ring-offset-2');
+                });
+
+                templateOptions.appendChild(button);
+            });
+        }
+
+
+
+        /**
+ * Generates or updates the QR code in the preview.
+
+ */
+function generateQRCode() {
+    const qrContent = `ID: ${idNumberInput.value || 'N/A'}, Name: ${nameInput.value || 'N/A'}, Org: ${departmentInput.value || 'N/A'}`;
+    const qrContainer = document.getElementById('qrcode-container');
+    const size = 64; // Corresponds to w-16 h-16 (16 * 4 = 64px)
+
+    if (qrcode) {
+        // If the QR code object already exists, just update the content
+        qrcode.makeCode(qrContent);
+    } else {
+       
+        qrContainer.innerHTML = ''; 
+        
+        // Create the QR code object for the first time
+        qrcode = new QRCode(qrContainer, {
+            text: qrContent,
+            width: size,
+            height: size,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H 
+        });
+    }
+}
+
+    
+        function updatePreview() {
+            // 1. Update Text Details
+            document.getElementById('card-name').textContent = nameInput.value.toUpperCase() || 'FULL NAME';
+            document.getElementById('card-id').querySelector('span').textContent = idNumberInput.value || 'ID-NUMBER';
+            document.getElementById('card-title').textContent = titleInput.value || 'Designation / Title';
+            document.getElementById('card-organization').textContent = departmentInput.value.toUpperCase() || 'ORGANIZATION NAME';
+            document.getElementById('card-valid-until').textContent = validUntilInput.value || '12/31/2025';
+
+            // 2. Reset and Apply Template Classes
+            const allBgClasses = Object.values(cardTemplates).map(t => t.bg).join(' ').split(' ');
+            const allTextClasses = Object.values(cardTemplates).map(t => t.text).join(' ').split(' ');
+            
+            // Remove all existing background and text classes
+            cardToCapture.classList.remove(...allBgClasses, ...allTextClasses);
+            
+            // Apply current template classes
+            cardToCapture.classList.add(...currentTemplate.bg.split(' '), currentTemplate.text);
+            
+            // Update border colors and logo color
+            const isDarkBg = currentTemplate.text.includes('text-white');
+            const borderColorClass = isDarkBg ? 'border-white' : 'border-gray-900';
+            const logoColorClass = isDarkBg ? 'text-white' : 'text-gray-900';
+
+            const borderElements = document.querySelectorAll('#id-card-header, .id-card-container > .pt-2');
+            borderElements.forEach(el => {
+                el.classList.remove('border-white', 'border-gray-900');
+                el.classList.add(borderColorClass, 'border-opacity-30');
+            });
+            
+            document.getElementById('card-logo').classList.remove('text-white', 'text-gray-900');
+            document.getElementById('card-logo').classList.add(logoColorClass);
+            
+            document.getElementById('id-photo').style.borderColor = isDarkBg ? 'white' : '#333';
+            generateQRCode();
+        }
+
+        /**
+         * Handles image file upload and displays it in the card preview.
+         */
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('id-photo').src = e.target.result;
+                    updatePreview(); 
+                };
+                reader.readAsDataURL(file);
+            } else {
+                document.getElementById('id-photo').src = "https://placehold.co/80x80/ffffff/333333?text=Photo";
+                updatePreview();
+            }
+        }
+        
+        /**
+         * Generates the PDF, downloads it, and saves data to the Flask backend.
+         */
+        async function downloadPDF() {
+            downloadMessage.classList.add('hidden');
+            
+            if (!nameInput.value || !idNumberInput.value || !departmentInput.value) {
+                downloadMessage.textContent = 'Please fill in Name, ID No., and Organization before downloading.';
+                downloadMessage.classList.remove('hidden', 'text-green-600');
+                downloadMessage.classList.add('text-red-600');
+                return;
+            }
+
+            // Show loading state
+            downloadBtn.disabled = true;
+            downloadText.classList.add('hidden');
+            loadingSpinner.classList.remove('hidden');
+            
+            const cardData = {
+                name: nameInput.value,
+                id: idNumberInput.value,
+                title: titleInput.value,
+                dept: departmentInput.value,
+                valid: validUntilInput.value,
+                photoUrl: document.getElementById('id-photo').src,
+                templateKey: currentTemplateKey // Include the selected template key
+            };
+
+            try {
+                // 1. Save data to Flask Backend
+                const response = await fetch('/save_data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(cardData)
+                });
+
+                const result = await response.json();
+                
+                if (result.status !== 'success') {
+                    throw new Error(result.message || 'Failed to save data on server.');
+                }
+                
+                downloadMessage.textContent = `Data saved successfully (ID: ${result.card_id}). PDF generating...`;
+                downloadMessage.classList.remove('hidden', 'text-red-600');
+                downloadMessage.classList.add('text-green-600');
+                
+                // 2. Generate PDF
+                const canvas = await html2canvas(cardToCapture, { 
+                    scale: 3,
+                    useCORS: true, 
+                    logging: false 
+                });
+
+                const imgData = canvas.toDataURL('image/png');
+                const { jsPDF } = window.jspdf;
+                
+               
+                const pdf = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'mm',
+                    format: [86, 54] 
+                });
+
+                const imgWidth = 86;
+                const imgHeight = 54;
+
+                pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                
+                const fileName = `${nameInput.value.replace(/\s/g, '_')}_IDCard.pdf`;
+                pdf.save(fileName);
+
+                // Final success message
+                downloadMessage.textContent = 'ID Card created and data saved successfully!';
+                
+            } catch (error) {
+                console.error("Operation failed:", error);
+                downloadMessage.textContent = `Error: ${error.message || 'PDF or data saving failed.'}`;
+                downloadMessage.classList.remove('hidden', 'text-green-600');
+                downloadMessage.classList.add('text-red-600');
+            } finally {
+                // Hide loading state
+                downloadBtn.disabled = false;
+                downloadText.classList.remove('hidden');
+                loadingSpinner.classList.add('hidden');
+            }
+        }
+
+        // --- Event Listeners and Initialization ---
+        
+        // Listen to all form input changes
+        form.addEventListener('input', updatePreview);
+        
+        // Listen for photo upload
+        photoUpload.addEventListener('change', handleImageUpload);
+        
+        // Listen for download button click
+        downloadBtn.addEventListener('click', downloadPDF);
+
+        // Initial setup
+        window.onload = () => {
+            renderTemplates();
+         
+            validUntilInput.value = (new Date().getFullYear() + 2) + '/12/31';
+            updatePreview(); 
+        };
+    </script>
+</body>
+</html>
