@@ -1,416 +1,899 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Instant ID Card Generator</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Professional Resume Builder — Enhanced</title>
+
+  <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- html2canvas & jspdf -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Playfair+Display:wght@700&display=swap');
+
+    :root {
+      --accent: #0f766e; /* default teal */
+      --accent-600: #0d9488;
+      --header-bg: linear-gradient(90deg,#0f766e, #06b6d4);
+    }
+
     body {
-      font-family: 'Inter', sans-serif;
-      background-color: #f8fafc;
+      font-family: 'Roboto', sans-serif;
+      background: linear-gradient(180deg, #f0f9f9 0%, #eefaf9 100%);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
     }
 
-    input, select, textarea {
-      transition: all 0.3s ease-in-out;
-    }
-    input:focus, select:focus, textarea:focus {
-      border-color: #6366f1;
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
-      outline: none;
-    }
-
-    .id-card-container {
-      width: 320px;
-      height: 200px;
-      transition: transform 0.3s;
-    }
-    .id-card-container:hover {
-      transform: scale(1.02);
+    /* A4-like preview area, responsive */
+    #resume-to-capture {
+      width: 794px; /* A4 width at 96dpi */
+      max-width: 100%;
+      min-height: 1123px;
+      background: white;
+      padding: 28px;
+      box-shadow: 0 10px 30px rgba(2,6,23,0.12);
+      border-radius: 8px;
+      position: relative;
+      z-index: 20;
+      transform-origin: top center;
     }
 
-    #id-photo {
-      width: 80px;
-      height: 80px;
-      object-fit: cover;
-      border: 2px solid white;
+    /* On small screens, scale the preview to fit nicely */
+    @media (max-width: 1024px) {
+      #resume-wrapper { display:flex; justify-content:center; }
+      #resume-to-capture { transform: scale(0.9); }
     }
+    @media (max-width: 640px) {
+      #resume-to-capture { transform: scale(0.8); }
+    }
+
+    .resume-section h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--accent);
+      border-bottom: 2px solid rgba(0,0,0,0.05);
+      padding-bottom: 6px;
+    }
+
+    /* simple safe default for list bullets in preview */
+    #preview-work-details ul, #preview-project-details ul, #preview-achievements ul, #preview-certifications ul {
+      margin-left: 1rem;
+      list-style: disc;
+    }
+
+    /* controls styling beyond tailwind */
+    .control-card { max-height: 80vh; overflow-y: auto; }
+
+    /* ensure preview floating isn't overlapped by page chrome */
+    .preview-column { position: relative; z-index: 10; }
   </style>
 </head>
+<body>
 
-<body class="flex flex-col min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 text-gray-800">
-
-  <!--  Navbar -->
-  <nav class="bg-gradient-to-r from-indigo-700 via-blue-700 to-cyan-600 text-white shadow-md">
-    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center px-6 py-3">
-      <h1 class="text-lg sm:text-2xl font-bold ">AI ID Card Generator</h1>
-       
-      <div class="flex items-center gap-3 mt-2 sm:mt-0">
-        <p class="text-sm sm:text-base">
-          Logged in as <span class="font-semibold text-yellow-300">{{ username }}</span>
-        </p>
-        <a href="{{ url_for('logout') }}" class="text-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-md transition duration-200">Logout</a>
+  <nav class="bg-gradient-to-r from-teal-700 via-cyan-700 to-indigo-600 text-white shadow">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">📄</span>
+        <h1 class="text-lg sm:text-2xl font-bold">Professional Resume Builder</h1>
+      </div>
+      <div class="flex items-center gap-3">
+        <p class="text-sm">Welcome, <span class="font-semibold text-yellow-300">{{ username }}</span></p>
+        <a href="{{ url_for('logout') }}" class="text-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-md">Logout</a>
       </div>
     </div>
   </nav>
 
-  <!-- Main Content -->
-  <main class="flex-grow max-w-6xl mx-auto px-4 sm:px-8 py-10 space-y-10">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-    <div class="flex flex-col lg:flex-row gap-10">
-      
-      <!-- Left Panel -->
-      <div class="lg:w-1/2 p-6 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200">
-        <h2 class="text-xl font-semibold mb-6 text-indigo-700 border-b pb-3">1. Enter Details</h2>
+      <!-- LEFT: Controls -->
+      <section class="lg:col-span-5">
+        <div class="bg-white rounded-2xl shadow p-6 control-card border">
+          <h2 class="text-xl font-bold mb-4 text-teal-700">1. Enter Resume Details</h2>
 
-        <form id="id-card-form" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-600">Full Name</label>
-            <input type="text" id="name" placeholder="E.g., Jane D. Doe" class="mt-1 w-full p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white" required />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-600">ID / Employee No.</label>
-            <input type="text" id="id-number" placeholder="E.g., EMP-1098" class="mt-1 w-full p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white" required />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-600">Title / Designation</label>
-            <input type="text" id="title" placeholder="E.g., Software Engineer" class="mt-1 w-full p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white" required />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-600">Department / Organization</label>
-            <input type="text" id="department" placeholder="E.g., Tech Solutions Inc." class="mt-1 w-full p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white" required />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-600">Valid Until</label>
-            <input type="text" id="valid-until" placeholder="E.g., 12/31/2025" class="mt-1 w-full p-2.5 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white" required />
-          </div>
-
-          <div class="pt-4">
-            <label for="photo-upload" class="block text-sm font-medium text-gray-600 mb-2">Passport Photo</label>
-            <input type="file" id="photo-upload" accept="image/*" class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
-          </div>
-        </form>
-
-        <div class="mt-8 border-t pt-6">
-          <h2 class="text-lg font-semibold mb-4 text-indigo-700">2. Choose Template</h2>
-          <div id="template-options" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
-        </div>
-      </div>
-
-      <!-- Right Panel -->
-      <div class="lg:w-1/2 p-6 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 flex flex-col items-center justify-start">
-        <h2 class="text-xl font-semibold mb-6 text-indigo-700 border-b pb-3 w-full">3. Preview & Download</h2>
-
-        <div id="id-card-to-capture" class="id-card-container rounded-xl flex flex-col p-4 shadow-lg">
-          <div id="id-card-header" class="flex justify-between items-center pb-2 border-b border-white/30 mb-2">
-            <h3 id="card-organization" class="text-lg font-bold text-white">ORGANIZATION NAME</h3>
-            <svg id="card-logo" class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-            </svg>
-          </div>
-
-          <div class="flex-grow flex items-center justify-between">
-            <div class="flex items-start gap-3">
-              <img id="id-photo" src="https://placehold.co/80x80/ffffff/333333?text=Photo" alt="User Photo" class="rounded-full" />
-              <div class="text-white">
-                <p id="card-name" class="text-xl font-extrabold leading-tight">FULL NAME</p>
-                <p id="card-title" class="text-sm opacity-90">Designation / Title</p>
-                <p id="card-id" class="text-xs mt-1">ID: <span class="font-semibold">ID-NUMBER</span></p>
+          <form id="resume-form" class="space-y-4" onsubmit="return false;">
+            <!-- Personal -->
+            <div class="space-y-2">
+              <h3 class="text-sm font-semibold text-gray-700 border-t pt-3">Personal & Contact</h3>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <input id="name" class="p-2 border rounded" placeholder="Full name (Alex J. Smith)" />
+                <input id="title" class="p-2 border rounded" placeholder="Professional title (Senior Dev)" />
+                <input id="email" class="p-2 border rounded" placeholder="Email" />
+                <input id="phone" class="p-2 border rounded" placeholder="Phone" />
+                <input id="address" class="p-2 border rounded col-span-1 sm:col-span-2" placeholder="City, State (optional)" />
+                <input id="linkedin" class="p-2 border rounded" placeholder="LinkedIn URL" />
+                <input id="github" class="p-2 border rounded" placeholder="GitHub / Portfolio URL" />
+              </div>
+              <div>
+                <label class="text-sm font-medium block mb-1">Profile Photo (optional)</label>
+                <input id="photo-upload" type="file" accept="image/*" class="text-sm" />
               </div>
             </div>
-            <div id="qrcode-container" class="w-16 h-16 bg-white p-1 rounded-md shadow-inner"></div>
-          </div>
 
-          <div class="pt-2 text-xs text-white text-right border-t border-white/30 mt-2">
-            <p class="font-medium">Valid Until: <span id="card-valid-until" class="font-bold">12/31/2025</span></p>
-          </div>
+            <!-- Objective -->
+            <div>
+              <h3 class="text-sm font-semibold text-gray-700 border-t pt-3">Career Objective / Summary</h3>
+              <textarea id="objective" rows="3" class="w-full p-2 border rounded" placeholder="Highlight 2-3 lines about your expertise & goals"></textarea>
+            </div>
+
+            <!-- Skills -->
+            <div>
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-gray-700 pt-3">Skills</h3>
+                <button id="add-skill-btn" class="text-xs px-2 py-1 bg-teal-600 text-white rounded">+ Add Skill</button>
+              </div>
+              <div id="skills-list" class="mt-2 space-y-2">
+                <!-- template item -->
+                <div class="skill-row flex gap-2 items-center">
+                  <input type="text" class="skill-input flex-1 p-2 border rounded" placeholder="E.g., Python" />
+                  <button class="remove-skill-btn hidden text-sm text-red-500">✕</button>
+                </div>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">Add single skill per row. Use + to add more.</p>
+            </div>
+
+            <!-- Experience -->
+            <div>
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-gray-700 pt-3">Work Experience</h3>
+                <button id="add-experience-btn" class="text-xs px-2 py-1 bg-teal-600 text-white rounded">+ Add Experience</button>
+              </div>
+              <div id="experience-list" class="mt-2 space-y-4">
+                <!-- one default experience entry will be inserted by JS -->
+              </div>
+            </div>
+
+            <!-- Education -->
+            <div>
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-gray-700 pt-3">Education</h3>
+                <button id="add-education-btn" class="text-xs px-2 py-1 bg-teal-600 text-white rounded">+ Add Education</button>
+              </div>
+              <div id="education-list" class="mt-2 space-y-3"></div>
+            </div>
+
+            <!-- Projects -->
+            <div>
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-gray-700 pt-3">Projects</h3>
+                <button id="add-project-btn" class="text-xs px-2 py-1 bg-teal-600 text-white rounded">+ Add Project</button>
+              </div>
+              <div id="project-list" class="mt-2 space-y-3"></div>
+            </div>
+
+            <!-- Certifications & Achievements -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <div class="flex items-center justify-between">
+                  <h3 class="text-sm font-semibold text-gray-700 pt-3">Certifications</h3>
+                  <button id="add-cert-btn" class="text-xs px-2 py-1 bg-teal-600 text-white rounded">+ Add</button>
+                </div>
+                <div id="cert-list" class="mt-2 space-y-2"></div>
+              </div>
+
+              <div>
+                <div class="flex items-center justify-between">
+                  <h3 class="text-sm font-semibold text-gray-700 pt-3">Achievements</h3>
+                  <button id="add-achv-btn" class="text-xs px-2 py-1 bg-teal-600 text-white rounded">+ Add</button>
+                </div>
+                <div id="achv-list" class="mt-2 space-y-2"></div>
+              </div>
+            </div>
+
+            <!-- Template / Color -->
+            <div class="mt-3">
+              <h3 class="text-sm font-semibold text-gray-700 pt-3">Choose Template / Accent</h3>
+              <div class="flex gap-3 mt-2 items-center">
+                <select id="template-select" class="p-2 border rounded">
+                  <option value="modern">Modern Teal</option>
+                  <option value="classic">Classic Blue</option>
+                  <option value="mono">Monochrome</option>
+                </select>
+
+                <input id="accent-color" type="color" value="#0f766e" title="Accent color" class="w-10 h-10 p-0 border-0" />
+              </div>
+              <p class="text-xs text-gray-500 mt-1">Pick accent color to customize headings & accents.</p>
+            </div>
+
+            <!-- Save / Download -->
+            <div class="mt-4 flex gap-3">
+              <button id="download-pdf-btn" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded font-semibold">Download Resume & Save Data</button>
+              <button id="preview-reset-btn" class="bg-gray-200 text-gray-700 px-4 py-2 rounded">Reset</button>
+            </div>
+            <p id="download-message" class="text-sm mt-2 text-center hidden"></p>
+          </form>
         </div>
+      </section>
 
-        <p id="download-message" class="text-sm mt-4 text-center font-medium hidden"></p>
+      <!-- RIGHT: Preview -->
+      <section class="lg:col-span-7 preview-column flex flex-col items-center gap-6">
+        <div class="bg-white p-6 rounded-2xl shadow w-full border">
+          <h2 class="text-xl font-bold mb-4 text-teal-700">Live Preview</h2>
 
-        <button id="download-pdf-btn" class="mt-5 w-full sm:w-auto px-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition transform hover:scale-[1.02] flex items-center justify-center gap-2">
-          <span id="download-text">Download ID Card & Save Data</span>
-          <span id="loading-spinner" class="hidden h-5 w-5 border-4 border-t-4 border-indigo-200 border-t-white rounded-full animate-spin"></span>
-        </button>
-      </div>
+          <div id="resume-wrapper" class="flex justify-center">
+            <div id="resume-to-capture" class="mx-auto">
+              <!-- Header -->
+              <div id="resume-header" class="flex items-center justify-between border-b pb-3 mb-4" style="border-color:var(--accent);">
+                <div class="flex-1">
+                  <h1 id="preview-name" class="text-3xl font-extrabold uppercase">FULL NAME</h1>
+                  <p id="preview-title" class="mt-1 font-medium" style="color:var(--accent);">Professional Title</p>
+                  <div class="text-sm mt-2 text-gray-600" id="preview-contact">
+                    <span id="preview-email">email@example.com</span> |
+                    <span id="preview-phone">(123) 456-7890</span> |
+                    <span id="preview-address">City, State</span>
+                  </div>
+                </div>
+                <div class="ml-4 flex-shrink-0">
+                  <img id="preview-photo" src="https://placehold.co/90x90/f0f9ff/0f766e?text=Photo" alt="Photo" class="rounded-full w-20 h-20 object-cover border-2" style="border-color:var(--accent);" />
+                </div>
+              </div>
+
+              <!-- Objective -->
+              <section class="resume-section">
+                <h3>CAREER OBJECTIVE</h3>
+                <p id="preview-objective" class="text-sm text-gray-700 italic">A concise summary of your professional goals and expertise...</p>
+              </section>
+
+              <!-- Skills -->
+              <section class="resume-section mt-3">
+                <h3>KEY SKILLS</h3>
+                <div id="preview-skills" class="flex flex-wrap gap-2 mt-2"></div>
+              </section>
+
+              <!-- Work Experience -->
+              <section class="resume-section mt-3">
+                <h3>WORK EXPERIENCE</h3>
+                <div id="preview-work" class="mt-2 space-y-3"></div>
+              </section>
+
+              <!-- Education -->
+              <section class="resume-section mt-3">
+                <h3>EDUCATION</h3>
+                <div id="preview-education" class="mt-2 space-y-2"></div>
+              </section>
+
+              <!-- Projects -->
+              <section class="resume-section mt-3">
+                <h3>PROJECTS</h3>
+                <div id="preview-projects" class="mt-2 space-y-3"></div>
+              </section>
+
+              <!-- Certifications & Achievements -->
+              <section class="resume-section mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <h3>CERTIFICATIONS</h3>
+                  <div id="preview-certifications" class="mt-2"></div>
+                </div>
+                <div>
+                  <h3>ACHIEVEMENTS</h3>
+                  <div id="preview-achievements" class="mt-2"></div>
+                </div>
+              </section>
+
+            </div>
+          </div>
+
+          <p class="text-xs text-gray-500 mt-3">Tip: Use + buttons to add multiple entries. Click "Download Resume & Save Data" to persist data and export PDF.</p>
+        </div>
+      </section>
     </div>
   </main>
 
-
-
-    <!-- Footer -->
-  <footer class="bg-gradient-to-r from-indigo-700 via-blue-700 to-cyan-600 py-6 text-center text-gray-100 mt-10 border-t">
-    <p>© 2025 AI ID Card Generator | Developed with ❤️ by Taniya & Kapish</p>
+  <footer class="max-w-7xl mx-auto px-4 py-6 text-center text-gray-600">
+    © 2025 Professional Resume Builder — Built with ❤️
   </footer>
 
   <script>
-    document.getElementById("year").textContent = new Date().getFullYear();
-  </script>
-    <script>
-        // --- Core Logic ---
+    // ---------- Utilities ----------
+    const el = sel => document.querySelector(sel);
+    const elAll = sel => Array.from(document.querySelectorAll(sel));
 
-        const cardTemplates = {
-            // Using 3 professional templates 
-            'Corporate Blue': { key: 'blue', bg: 'bg-gradient-to-br from-blue-900 to-blue-600', text: 'text-white' },
-            'Vibrant Green': { key: 'green', bg: 'bg-gradient-to-br from-green-700 to-teal-500', text: 'text-white' },
-            'Modern Dark': { key: 'dark', bg: 'bg-gradient-to-br from-gray-800 to-gray-600', text: 'text-white' },
-            // Additional templates for more options
-            
-            'Clean Gray': { key: 'white', bg: 'bg-gradient-to-br from-gray-500 to-gray-700', text: 'text-white' },
-            'Classic Red': { key: 'red', bg: 'bg-gradient-to-br from-red-700 to-pink-500', text: 'text-white' },
-        };
+    // Form elements & containers
+    const nameInput = el('#name');
+    const titleInput = el('#title');
+    const emailInput = el('#email');
+    const phoneInput = el('#phone');
+    const addressInput = el('#address');
+    const linkedinInput = el('#linkedin');
+    const githubInput = el('#github');
+    const objectiveInput = el('#objective');
+    const photoUpload = el('#photo-upload');
 
-        const form = document.getElementById('id-card-form');
-        const cardToCapture = document.getElementById('id-card-to-capture');
-        const photoUpload = document.getElementById('photo-upload');
-        const downloadBtn = document.getElementById('download-pdf-btn');
-        const downloadText = document.getElementById('download-text');
-        const loadingSpinner = document.getElementById('loading-spinner');
-        const downloadMessage = document.getElementById('download-message');
-        const templateOptions = document.getElementById('template-options');
-        
-        const nameInput = document.getElementById('name');
-        const idNumberInput = document.getElementById('id-number');
-        const titleInput = document.getElementById('title');
-        const departmentInput = document.getElementById('department');
-        const validUntilInput = document.getElementById('valid-until');
-        
-        let currentTemplateKey = 'Corporate Blue';
-        let currentTemplate = cardTemplates[currentTemplateKey];
-let qrcode = null;
+    const skillsList = el('#skills-list');
+    const addSkillBtn = el('#add-skill-btn');
 
-        /**
-         * Renders the template options buttons and attaches click listeners.
-         */
-        function renderTemplates() {
-            templateOptions.innerHTML = '';
-            Object.keys(cardTemplates).forEach(key => {
-                const template = cardTemplates[key];
-                const button = document.createElement('button');
-                
-                button.className = `w-full h-10 rounded-lg shadow-md transition duration-200 hover:opacity-80 focus:ring-4 focus:ring-offset-2 ${template.bg} ${template.text}`;
-                button.innerHTML = `<span class="capitalize text-xs">${key}</span>`;
-                button.dataset.templateKey = key;
-                
-                if (key === currentTemplateKey) {
-                    button.classList.add('ring-4', 'ring-blue-500', 'ring-offset-2');
-                }
+    const experienceList = el('#experience-list');
+    const addExperienceBtn = el('#add-experience-btn');
 
-                button.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    currentTemplateKey = e.currentTarget.dataset.templateKey;
-                    currentTemplate = cardTemplates[currentTemplateKey];
-                    updatePreview();
-                    
-                    document.querySelectorAll('#template-options button').forEach(btn => {
-                        btn.classList.remove('ring-4', 'ring-blue-500', 'ring-offset-2');
-                    });
-                    e.currentTarget.classList.add('ring-4', 'ring-blue-500', 'ring-offset-2');
-                });
+    const educationList = el('#education-list');
+    const addEducationBtn = el('#add-education-btn');
 
-                templateOptions.appendChild(button);
-            });
-        }
+    const projectList = el('#project-list');
+    const addProjectBtn = el('#add-project-btn');
 
+    const certList = el('#cert-list');
+    const addCertBtn = el('#add-cert-btn');
 
+    const achvList = el('#achv-list');
+    const addAchvBtn = el('#add-achv-btn');
 
-        /**
- * Generates or updates the QR code in the preview.
+    const templateSelect = el('#template-select');
+    const accentColor = el('#accent-color');
+    const downloadBtn = el('#download-pdf-btn');
+    const previewResetBtn = el('#preview-reset-btn');
+    const downloadMessage = el('#download-message');
 
- */
-function generateQRCode() {
-    const qrContent = `ID: ${idNumberInput.value || 'N/A'}, Name: ${nameInput.value || 'N/A'}, Org: ${departmentInput.value || 'N/A'}`;
-    const qrContainer = document.getElementById('qrcode-container');
-    const size = 64; // Corresponds to w-16 h-16 (16 * 4 = 64px)
+    // Preview elements
+    const previewName = el('#preview-name');
+    const previewTitle = el('#preview-title');
+    const previewEmail = el('#preview-email');
+    const previewPhone = el('#preview-phone');
+    const previewAddress = el('#preview-address');
+    const previewObjective = el('#preview-objective');
+    const previewSkills = el('#preview-skills');
+    const previewWork = el('#preview-work');
+    const previewEducation = el('#preview-education');
+    const previewProjects = el('#preview-projects');
+    const previewCerts = el('#preview-certifications');
+    const previewAchv = el('#preview-achievements');
+    const previewPhoto = el('#preview-photo');
+    const resumeToCapture = el('#resume-to-capture');
 
-    if (qrcode) {
-        // If the QR code object already exists, just update the content
-        qrcode.makeCode(qrContent);
-    } else {
-       
-        qrContainer.innerHTML = ''; 
-        
-        // Create the QR code object for the first time
-        qrcode = new QRCode(qrContainer, {
-            text: qrContent,
-            width: size,
-            height: size,
-            colorDark: "#000000",
-            colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.H 
-        });
+    // Keep state for photo data url
+    let photoDataUrl = previewPhoto.src;
+
+    // ---------- Dynamic field factories ----------
+
+    function createSkillRow(value = '') {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'skill-row flex gap-2 items-center';
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'skill-input flex-1 p-2 border rounded';
+      input.placeholder = 'E.g., Python';
+      input.value = value;
+      wrapper.appendChild(input);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'remove-skill-btn text-sm text-red-500 px-2 py-1 rounded';
+      removeBtn.textContent = '✕';
+      removeBtn.title = 'Remove skill';
+      wrapper.appendChild(removeBtn);
+
+      // Events
+      input.addEventListener('input', updatePreview);
+      removeBtn.addEventListener('click', () => { wrapper.remove(); updatePreview(); });
+
+      return wrapper;
     }
-}
 
-    
-        function updatePreview() {
-            // 1. Update Text Details
-            document.getElementById('card-name').textContent = nameInput.value.toUpperCase() || 'FULL NAME';
-            document.getElementById('card-id').querySelector('span').textContent = idNumberInput.value || 'ID-NUMBER';
-            document.getElementById('card-title').textContent = titleInput.value || 'Designation / Title';
-            document.getElementById('card-organization').textContent = departmentInput.value.toUpperCase() || 'ORGANIZATION NAME';
-            document.getElementById('card-valid-until').textContent = validUntilInput.value || '12/31/2025';
+    function createExperienceEntry(data = {}) {
+      /* data: {title, company, duration, location, bullets: []} */
+      const id = 'exp-' + Date.now() + Math.floor(Math.random() * 999);
+      const container = document.createElement('div');
+      container.className = 'exp-entry border rounded p-3 bg-gray-50';
 
-            // 2. Reset and Apply Template Classes
-            const allBgClasses = Object.values(cardTemplates).map(t => t.bg).join(' ').split(' ');
-            const allTextClasses = Object.values(cardTemplates).map(t => t.text).join(' ').split(' ');
-            
-            // Remove all existing background and text classes
-            cardToCapture.classList.remove(...allBgClasses, ...allTextClasses);
-            
-            // Apply current template classes
-            cardToCapture.classList.add(...currentTemplate.bg.split(' '), currentTemplate.text);
-            
-            // Update border colors and logo color
-            const isDarkBg = currentTemplate.text.includes('text-white');
-            const borderColorClass = isDarkBg ? 'border-white' : 'border-gray-900';
-            const logoColorClass = isDarkBg ? 'text-white' : 'text-gray-900';
+      container.innerHTML = `
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input type="text" class="exp-title p-2 border rounded" placeholder="Job Title" value="${escapeHtml(data.title||'')}" />
+          <input type="text" class="exp-company p-2 border rounded" placeholder="Company" value="${escapeHtml(data.company||'')}" />
+          <input type="text" class="exp-duration p-2 border rounded" placeholder="Duration (2020 - Present)" value="${escapeHtml(data.duration||'')}" />
+          <input type="text" class="exp-location p-2 border rounded" placeholder="Location" value="${escapeHtml(data.location||'')}" />
+        </div>
+        <div class="mt-2">
+          <div class="flex items-center justify-between">
+            <label class="text-sm font-medium">Responsibilities / Achievements</label>
+            <div>
+              <button class="add-exp-bullet text-xs bg-teal-600 text-white px-2 py-1 rounded">+ Bullet</button>
+              <button class="remove-exp-entry text-xs text-red-500 px-2 py-1 rounded">Remove</button>
+            </div>
+          </div>
+          <div class="exp-bullets mt-2 space-y-1"></div>
+        </div>
+      `;
 
-            const borderElements = document.querySelectorAll('#id-card-header, .id-card-container > .pt-2');
-            borderElements.forEach(el => {
-                el.classList.remove('border-white', 'border-gray-900');
-                el.classList.add(borderColorClass, 'border-opacity-30');
-            });
-            
-            document.getElementById('card-logo').classList.remove('text-white', 'text-gray-900');
-            document.getElementById('card-logo').classList.add(logoColorClass);
-            
-            document.getElementById('id-photo').style.borderColor = isDarkBg ? 'white' : '#333';
-            generateQRCode();
+      const bulletsContainer = container.querySelector('.exp-bullets');
+      // populate existing bullets if any
+      (data.bullets || ['Key responsibility/achievement 1.']).forEach(b => {
+        const brow = createBulletRow(b);
+        bulletsContainer.appendChild(brow);
+      });
+
+      // events
+      container.querySelectorAll('input').forEach(i => i.addEventListener('input', updatePreview));
+      container.querySelector('.add-exp-bullet').addEventListener('click', (e) => {
+        e.preventDefault();
+        bulletsContainer.appendChild(createBulletRow(''));
+        updatePreview();
+      });
+      container.querySelector('.remove-exp-entry').addEventListener('click', () => {
+        container.remove();
+        updatePreview();
+      });
+
+      return container;
+    }
+
+    function createBulletRow(text = '') {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'flex gap-2 items-start';
+
+      const textarea = document.createElement('textarea');
+      textarea.rows = 2;
+      textarea.className = 'flex-1 p-2 border rounded';
+      textarea.placeholder = 'Responsibility / achievement';
+      textarea.value = text;
+      textarea.addEventListener('input', updatePreview);
+
+      const rm = document.createElement('button');
+      rm.type = 'button';
+      rm.className = 'text-red-500 px-2 py-1 rounded';
+      rm.textContent = '✕';
+      rm.title = 'Remove bullet';
+      rm.addEventListener('click', () => { wrapper.remove(); updatePreview(); });
+
+      wrapper.appendChild(textarea);
+      wrapper.appendChild(rm);
+      return wrapper;
+    }
+
+    function createEducationEntry(data = {}) {
+      const container = document.createElement('div');
+      container.className = 'edu-entry flex gap-2 items-center';
+
+      const degree = document.createElement('input');
+      degree.className = 'p-2 border rounded flex-1';
+      degree.placeholder = 'Degree (B.Tech, M.Sc)';
+      degree.value = data.degree || '';
+      const institute = document.createElement('input');
+      institute.className = 'p-2 border rounded flex-1';
+      institute.placeholder = 'Institute';
+      institute.value = data.institute || '';
+      const year = document.createElement('input');
+      year.className = 'p-2 border rounded w-24';
+      year.placeholder = 'Year';
+      year.value = data.year || '';
+
+      const remove = document.createElement('button');
+      remove.className = 'text-red-500 px-2 py-1 rounded';
+      remove.textContent = '✕';
+      remove.addEventListener('click', () => { container.remove(); updatePreview(); });
+
+      [degree, institute, year].forEach(i => i.addEventListener('input', updatePreview));
+      container.appendChild(degree);
+      container.appendChild(institute);
+      container.appendChild(year);
+      container.appendChild(remove);
+      return container;
+    }
+
+    function createProjectEntry(data = {}) {
+      const container = document.createElement('div');
+      container.className = 'proj-entry border rounded p-3 bg-gray-50';
+
+      container.innerHTML = `
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input type="text" class="proj-name p-2 border rounded" placeholder="Project Name" value="${escapeHtml(data.name||'')}" />
+          <input type="text" class="proj-tech p-2 border rounded" placeholder="Tech stack (comma separated)" value="${escapeHtml(data.tech||'')}" />
+        </div>
+        <div class="mt-2">
+          <div class="flex items-center justify-between">
+            <label class="text-sm font-medium">Description</label>
+            <button class="remove-proj text-xs text-red-500 px-2 py-1 rounded">Remove</button>
+          </div>
+          <div class="proj-desc mt-2">${escapeHtml(data.description||'')}</div>
+          <textarea class="proj-desc-input hidden mt-2 p-2 border rounded" rows="3" placeholder="Write description here...">${escapeHtml(data.description||'')}</textarea>
+        </div>
+      `;
+
+      const name = container.querySelector('.proj-name');
+      const tech = container.querySelector('.proj-tech');
+      const descDiv = container.querySelector('.proj-desc');
+      const descInput = container.querySelector('.proj-desc-input');
+
+      name.addEventListener('input', updatePreview);
+      tech.addEventListener('input', updatePreview);
+
+      // Double-click description to edit (UX)
+      descDiv.addEventListener('dblclick', () => {
+        descDiv.classList.add('hidden');
+        descInput.classList.remove('hidden');
+        descInput.focus();
+      });
+      descInput.addEventListener('input', () => {
+        descDiv.textContent = descInput.value;
+        updatePreview();
+      });
+
+      container.querySelector('.remove-proj').addEventListener('click', () => {
+        container.remove();
+        updatePreview();
+      });
+
+      return container;
+    }
+
+    function createSimpleTextEntry(value = '') {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'flex gap-2 items-center';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'p-2 border rounded flex-1';
+      input.value = value;
+      input.placeholder = 'Enter text';
+      input.addEventListener('input', updatePreview);
+      const rm = document.createElement('button');
+      rm.className = 'text-red-500 px-2 py-1 rounded';
+      rm.textContent = '✕';
+      rm.addEventListener('click', () => { wrapper.remove(); updatePreview(); });
+      wrapper.appendChild(input);
+      wrapper.appendChild(rm);
+      return wrapper;
+    }
+
+    // ---------- Helpers ----------
+    function escapeHtml(str) {
+      return String(str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // ---------- Initialization ----------
+    function initDefaults() {
+      // Skills: start with 3 empty rows
+      skillsList.innerHTML = '';
+      ['HTML', 'CSS', 'JavaScript'].forEach(s => skillsList.appendChild(createSkillRow(s)));
+      // Experiences: one default
+      experienceList.innerHTML = '';
+      experienceList.appendChild(createExperienceEntry({ title: 'Senior Software Engineer', company: 'Company Name', duration: '2022 - Present', location: 'City, Country', bullets: ['Led X project', 'Improved performance by 40%'] }));
+      // Education
+      educationList.innerHTML = '';
+      educationList.appendChild(createEducationEntry({ degree: 'B.Tech. Computer Science', institute: 'University Name', year: '2019' }));
+      // Projects
+      projectList.innerHTML = '';
+      projectList.appendChild(createProjectEntry({ name: 'Resume Builder', tech: 'JS, Tailwind, Flask', description: 'A dynamic resume builder with live preview and PDF export.' }));
+      // Certs & Achievements
+      certList.innerHTML = '';
+      certList.appendChild(createSimpleTextEntry('Certified AWS Solutions Architect'));
+      achvList.innerHTML = '';
+      achvList.appendChild(createSimpleTextEntry('Placed 1st in Hackathon 2024'));
+      updatePreview();
+    }
+
+    // ---------- Update Preview ----------
+    function updatePreview() {
+      // Personal
+      previewName.textContent = (nameInput.value || 'FULL NAME').toUpperCase();
+      previewTitle.textContent = titleInput.value || 'Professional Title';
+      previewEmail.textContent = emailInput.value || 'email@example.com';
+      previewPhone.textContent = phoneInput.value || '(123) 456-7890';
+      previewAddress.textContent = addressInput.value || 'City, State';
+
+      // Objective
+      previewObjective.textContent = objectiveInput.value || 'A concise summary of your professional goals and expertise...';
+
+      // Skills
+      previewSkills.innerHTML = '';
+      const skillInputs = elAll('.skill-input');
+      const skillVals = skillInputs.map(i => i.value.trim()).filter(v => v);
+      skillVals.forEach(s => {
+        const badge = document.createElement('span');
+        badge.className = 'px-2 py-1 border rounded text-sm';
+        badge.textContent = s;
+        previewSkills.appendChild(badge);
+      });
+
+      // Work Experiences
+      previewWork.innerHTML = '';
+      experienceList.querySelectorAll('.exp-entry').forEach(entry => {
+        const title = entry.querySelector('.exp-title').value || '';
+        const company = entry.querySelector('.exp-company').value || '';
+        const duration = entry.querySelector('.exp-duration').value || '';
+        const location = entry.querySelector('.exp-location').value || '';
+        const bullets = Array.from(entry.querySelectorAll('.exp-bullets textarea')).map(t => t.value.trim()).filter(v => v);
+
+        const block = document.createElement('div');
+        block.className = 'mb-2';
+        const heading = document.createElement('p');
+        heading.className = 'font-semibold';
+        heading.textContent = `${title}${company ? ', ' + company : ''}`;
+        const sub = document.createElement('p');
+        sub.className = 'text-xs text-teal-600';
+        sub.textContent = `${duration}${location ? ' | ' + location : ''}`;
+        const ul = document.createElement('ul');
+        ul.className = 'mt-1 text-sm';
+        bullets.length ? bullets.forEach(b => { const li = document.createElement('li'); li.textContent = b; ul.appendChild(li); }) : (function(){ const li = document.createElement('li'); li.textContent = 'Key responsibility/achievement 1.'; ul.appendChild(li); })();
+
+        block.appendChild(heading);
+        block.appendChild(sub);
+        block.appendChild(ul);
+        previewWork.appendChild(block);
+      });
+
+      // Education
+      previewEducation.innerHTML = '';
+      educationList.querySelectorAll('.edu-entry').forEach(e => {
+        const degree = e.querySelector('input:nth-child(1)').value || '';
+        const inst = e.querySelector('input:nth-child(2)').value || '';
+        const year = e.querySelector('input:nth-child(3)').value || '';
+        const p = document.createElement('div'); p.className = 'mb-1';
+        const deg = document.createElement('p'); deg.className = 'font-semibold'; deg.textContent = degree || inst;
+        const meta = document.createElement('p'); meta.className = 'text-xs text-teal-600'; meta.textContent = `${inst}${year? ' | ' + year:''}`;
+        p.appendChild(deg); p.appendChild(meta);
+        previewEducation.appendChild(p);
+      });
+
+      // Projects
+      previewProjects.innerHTML = '';
+      projectList.querySelectorAll('.proj-entry').forEach(pr => {
+        const name = pr.querySelector('.proj-name').value || '';
+        const tech = pr.querySelector('.proj-tech').value || '';
+        const desc = pr.querySelector('.proj-desc').textContent || '';
+        const block = document.createElement('div');
+        const heading = document.createElement('p'); heading.className = 'font-semibold'; heading.textContent = name;
+        const meta = document.createElement('p'); meta.className = 'text-xs text-teal-600'; meta.textContent = tech;
+        const p = document.createElement('p'); p.className = 'text-sm mt-1'; p.textContent = desc;
+        block.appendChild(heading); block.appendChild(meta); block.appendChild(p);
+        previewProjects.appendChild(block);
+      });
+
+      // Certifications
+      previewCerts.innerHTML = '';
+      certList.querySelectorAll('input').forEach(i => {
+        if (i.value.trim()) {
+          const p = document.createElement('p'); p.className = 'text-sm'; p.textContent = '• ' + i.value;
+          previewCerts.appendChild(p);
+        }
+      });
+
+      // Achievements
+      previewAchv.innerHTML = '';
+      achvList.querySelectorAll('input').forEach(i => {
+        if (i.value.trim()) {
+          const p = document.createElement('p'); p.className = 'text-sm'; p.textContent = '• ' + i.value;
+          previewAchv.appendChild(p);
+        }
+      });
+
+      // Photo
+      previewPhoto.src = photoDataUrl || previewPhoto.src;
+
+      // Accent color (CSS variable)
+      document.documentElement.style.setProperty('--accent', accentColor.value);
+      // adjust small accent 600 manually (simple heuristic)
+      document.documentElement.style.setProperty('--accent-600', shadeColor(accentColor.value, -12));
+      // border color for photo:
+      previewPhoto.style.borderColor = accentColor.value;
+      // header border
+      document.getElementById('resume-header').style.borderColor = accentColor.value;
+      // headings color already bound via CSS variable
+    }
+
+    // shade hex color (simple) to generate slightly darker for hover/shadows
+    function shadeColor(hex, percent) {
+      // hex in format #RRGGBB
+      let R = parseInt(hex.substring(1,3),16);
+      let G = parseInt(hex.substring(3,5),16);
+      let B = parseInt(hex.substring(5,7),16);
+      R = parseInt(R * (100 + percent) / 100);
+      G = parseInt(G * (100 + percent) / 100);
+      B = parseInt(B * (100 + percent) / 100);
+      R = (R<255)?R:255; G = (G<255)?G:255; B = (B<255)?B:255;
+      const rr = (R.toString(16).length==1)?'0'+R.toString(16):R.toString(16);
+      const gg = (G.toString(16).length==1)?'0'+G.toString(16):G.toString(16);
+      const bb = (B.toString(16).length==1)?'0'+B.toString(16):B.toString(16);
+      return '#'+rr+gg+bb;
+    }
+
+    // ---------- Event wiring ----------
+    // Skill add
+    addSkillBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      skillsList.appendChild(createSkillRow(''));
+      updatePreview();
+    });
+
+    // Experience add
+    addExperienceBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      experienceList.appendChild(createExperienceEntry({}));
+      updatePreview();
+    });
+
+    // Education add
+    addEducationBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      educationList.appendChild(createEducationEntry({}));
+      updatePreview();
+    });
+
+    // Projects add
+    addProjectBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      projectList.appendChild(createProjectEntry({}));
+      updatePreview();
+    });
+
+    // Cert add
+    addCertBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      certList.appendChild(createSimpleTextEntry(''));
+      updatePreview();
+    });
+
+    // Achv add
+    addAchvBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      achvList.appendChild(createSimpleTextEntry(''));
+      updatePreview();
+    });
+
+    // template select & color picker
+    templateSelect.addEventListener('change', () => {
+      const t = templateSelect.value;
+      if (t === 'modern') accentColor.value = '#0f766e';
+      if (t === 'classic') accentColor.value = '#1d4ed8';
+      if (t === 'mono') accentColor.value = '#374151';
+      updatePreview();
+    });
+    accentColor.addEventListener('input', updatePreview);
+
+    // reset preview form
+    previewResetBtn.addEventListener('click', () => {
+      if (!confirm('Reset all fields to defaults?')) return;
+      // clear inputs
+      nameInput.value = '';
+      titleInput.value = '';
+      emailInput.value = '';
+      phoneInput.value = '';
+      addressInput.value = '';
+      linkedinInput.value = '';
+      githubInput.value = '';
+      objectiveInput.value = '';
+      accentColor.value = '#0f766e';
+      initDefaults();
+      updatePreview();
+    });
+
+    // photo upload
+    photoUpload.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) {
+        photoDataUrl = previewPhoto.src;
+        updatePreview();
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        photoDataUrl = ev.target.result;
+        updatePreview();
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Update preview on input for main fields
+    [nameInput, titleInput, emailInput, phoneInput, addressInput, linkedinInput, githubInput, objectiveInput].forEach(i => i.addEventListener('input', updatePreview));
+
+    // Download + Save data
+    downloadBtn.addEventListener('click', async () => {
+      downloadMessage.classList.add('hidden');
+      // Basic validation
+      if (!nameInput.value || !titleInput.value) {
+        downloadMessage.textContent = 'Please enter Full Name and Professional Title.';
+        downloadMessage.className = 'text-sm text-red-600 mt-2';
+        downloadMessage.classList.remove('hidden');
+        return;
+      }
+
+      downloadBtn.disabled = true;
+      downloadBtn.textContent = 'Saving & Generating...';
+
+      // Gather structured data
+      const resumeData = {
+        name: nameInput.value,
+        title: titleInput.value,
+        contact: {
+          email: emailInput.value,
+          phone: phoneInput.value,
+          address: addressInput.value,
+          linkedin: linkedinInput.value,
+          github: githubInput.value
+        },
+        objective: objectiveInput.value,
+        skills: elAll('.skill-input').map(i => i.value.trim()).filter(v=>v),
+        experiences: Array.from(experienceList.querySelectorAll('.exp-entry')).map(entry => ({
+          title: entry.querySelector('.exp-title').value,
+          company: entry.querySelector('.exp-company').value,
+          duration: entry.querySelector('.exp-duration').value,
+          location: entry.querySelector('.exp-location').value,
+          bullets: Array.from(entry.querySelectorAll('.exp-bullets textarea')).map(t=>t.value).filter(v=>v)
+        })),
+        education: Array.from(educationList.querySelectorAll('.edu-entry')).map(e => ({
+          degree: e.querySelector('input:nth-child(1)').value,
+          institute: e.querySelector('input:nth-child(2)').value,
+          year: e.querySelector('input:nth-child(3)').value
+        })),
+        projects: Array.from(projectList.querySelectorAll('.proj-entry')).map(p => ({
+          name: p.querySelector('.proj-name').value,
+          tech: p.querySelector('.proj-tech').value,
+          description: p.querySelector('.proj-desc').textContent
+        })),
+        certifications: Array.from(certList.querySelectorAll('input')).map(i => i.value).filter(v=>v),
+        achievements: Array.from(achvList.querySelectorAll('input')).map(i => i.value).filter(v=>v),
+        photoUrl: photoDataUrl,
+        templateAccent: accentColor.value,
+        templateKey: templateSelect.value,
+        timestamp: new Date().toISOString()
+      };
+
+      try {
+        // Save to backend (Flask endpoint expected)
+        const saveResp = await fetch('/save_data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(resumeData)
+        });
+        const saveRes = await saveResp.json();
+
+        if (saveRes.status !== 'success') {
+          throw new Error(saveRes.message || 'Failed to save on server');
         }
 
-        /**
-         * Handles image file upload and displays it in the card preview.
-         */
-        function handleImageUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    document.getElementById('id-photo').src = e.target.result;
-                    updatePreview(); 
-                };
-                reader.readAsDataURL(file);
-            } else {
-                document.getElementById('id-photo').src = "https://placehold.co/80x80/ffffff/333333?text=Photo";
-                updatePreview();
-            }
-        }
-        
-        /**
-         * Generates the PDF, downloads it, and saves data to the Flask backend.
-         */
-        async function downloadPDF() {
-            downloadMessage.classList.add('hidden');
-            
-            if (!nameInput.value || !idNumberInput.value || !departmentInput.value) {
-                downloadMessage.textContent = 'Please fill in Name, ID No., and Organization before downloading.';
-                downloadMessage.classList.remove('hidden', 'text-green-600');
-                downloadMessage.classList.add('text-red-600');
-                return;
-            }
+        // Generate PDF via html2canvas
+        const canvas = await html2canvas(resumeToCapture, { scale: 3, useCORS: true, logging: false });
+        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pageWidth = 210;
+        const imgWidth = pageWidth;
+        const imgHeight = canvas.height * imgWidth / canvas.width;
+        pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+        const filename = `${resumeData.name.replace(/\s+/g,'_')}_Resume.pdf`;
+        pdf.save(filename);
 
-            // Show loading state
-            downloadBtn.disabled = true;
-            downloadText.classList.add('hidden');
-            loadingSpinner.classList.remove('hidden');
-            
-            const cardData = {
-                name: nameInput.value,
-                id: idNumberInput.value,
-                title: titleInput.value,
-                dept: departmentInput.value,
-                valid: validUntilInput.value,
-                photoUrl: document.getElementById('id-photo').src,
-                templateKey: currentTemplateKey // Include the selected template key
-            };
+        downloadMessage.textContent = 'Saved & PDF generated successfully!';
+        downloadMessage.className = 'text-sm text-green-600 mt-2';
+        downloadMessage.classList.remove('hidden');
 
-            try {
-                // 1. Save data to Flask Backend
-                const response = await fetch('/save_data', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(cardData)
-                });
+      } catch (err) {
+        console.error(err);
+        downloadMessage.textContent = 'Error: ' + (err.message || 'Saving or PDF generation failed.');
+        downloadMessage.className = 'text-sm text-red-600 mt-2';
+        downloadMessage.classList.remove('hidden');
+      } finally {
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = 'Download Resume & Save Data';
+      }
+    });
 
-                const result = await response.json();
-                
-                if (result.status !== 'success') {
-                    throw new Error(result.message || 'Failed to save data on server.');
-                }
-                
-                downloadMessage.textContent = `Data saved successfully (ID: ${result.card_id}). PDF generating...`;
-                downloadMessage.classList.remove('hidden', 'text-red-600');
-                downloadMessage.classList.add('text-green-600');
-                
-                // 2. Generate PDF
-                const canvas = await html2canvas(cardToCapture, { 
-                    scale: 3,
-                    useCORS: true, 
-                    logging: false 
-                });
+    // ---------- Initial render ----------
+    initDefaults();
 
-                const imgData = canvas.toDataURL('image/png');
-                const { jsPDF } = window.jspdf;
-                
-               
-                const pdf = new jsPDF({
-                    orientation: 'landscape',
-                    unit: 'mm',
-                    format: [86, 54] 
-                });
+    // ---------- small helpers to wire dynamic initial items ----------
+    // For initial skill remove button visibility
+    document.addEventListener('click', (e) => {
+      if (e.target.matches('.remove-skill-btn')) {
+        const wrapper = e.target.closest('.skill-row');
+        if (wrapper) { wrapper.remove(); updatePreview(); }
+      }
+    });
 
-                const imgWidth = 86;
-                const imgHeight = 54;
+    // helper to auto-update when user types into dynamically added simple inputs
+    document.addEventListener('input', (e) => {
+      if (e.target.matches('.skill-input') || e.target.matches('.exp-title') || e.target.matches('.exp-company') || e.target.matches('.exp-duration') || e.target.matches('.exp-location') || e.target.matches('.proj-name') || e.target.matches('.proj-tech') || e.target.matches('.edu-entry input') ) {
+        updatePreview();
+      }
+    });
 
-                pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-                
-                const fileName = `${nameInput.value.replace(/\s/g, '_')}_IDCard.pdf`;
-                pdf.save(fileName);
+    // Run initial preview update
+    updatePreview();
 
-                // Final success message
-                downloadMessage.textContent = 'ID Card created and data saved successfully!';
-                
-            } catch (error) {
-                console.error("Operation failed:", error);
-                downloadMessage.textContent = `Error: ${error.message || 'PDF or data saving failed.'}`;
-                downloadMessage.classList.remove('hidden', 'text-green-600');
-                downloadMessage.classList.add('text-red-600');
-            } finally {
-                // Hide loading state
-                downloadBtn.disabled = false;
-                downloadText.classList.remove('hidden');
-                loadingSpinner.classList.add('hidden');
-            }
-        }
-
-        // --- Event Listeners and Initialization ---
-        
-        // Listen to all form input changes
-        form.addEventListener('input', updatePreview);
-        
-        // Listen for photo upload
-        photoUpload.addEventListener('change', handleImageUpload);
-        
-        // Listen for download button click
-        downloadBtn.addEventListener('click', downloadPDF);
-
-        // Initial setup
-        window.onload = () => {
-            renderTemplates();
-         
-            validUntilInput.value = (new Date().getFullYear() + 2) + '/12/31';
-            updatePreview(); 
-        };
-    </script>
+  </script>
 </body>
 </html>
