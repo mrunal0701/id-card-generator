@@ -48,4 +48,91 @@ bash
 python -m venv venv
 
 
-Activate it on
+Activate it on Windows PowerShell:
+
+powershell
+.\venv\Scripts\Activate.ps1
+
+3. Install Dependencies
+bash
+pip install Flask
+
+
+If your project has a requirements.txt file, you can install all listed dependencies with:
+
+bash
+pip install -r requirements.txt
+
+4. Run the Application
+
+Run the following command from the project directory:
+
+bash
+python app.py
+
+
+The application initializes the SQLite database when started.
+
+5. Open in Your Browser
+
+Visit:
+
+text
+http://127.0.0.1:5000/
+
+
+Create an account or log in to access the resume generator.
+
+💡 How It Works
+Register: Create an account with a username and password.
+Log In: Authenticate to access the resume builder.
+Enter Details: Add personal information, career objectives, education, experience, skills, and projects.
+Get Recommendations: Receive suggested resume objectives, skills, and career-specific tips.
+Save Resume Data: Submit resume information to the Flask backend, which stores it in the SQLite database.
+Manage Your Session: Log out when finished.
+🔗 Application Routes
+Route	Method	Description
+/	GET	Home page
+/signup	GET, POST	User registration
+/login	GET, POST	User authentication
+/logout	GET	End the current session
+/generator	GET	Access the resume builder
+/save_data	POST	Save resume information
+/recommend	POST	Get career-based recommendations
+/users	GET	Display the user list
+🗄️ Database Design
+
+The application uses SQLite with two primary tables:
+
+users: Stores user IDs, usernames, passwords, and account creation timestamps.
+resumes: Stores resume information associated with a user, including contact details, education, work experience, skills, projects, template selection, and photo information.
+
+Complex resume fields are serialized as JSON strings before being stored in the database.
+
+🔮 Future Enhancements
+Integrate a real AI language model for personalized resume suggestions.
+Add multiple resume templates and live previews.
+Export completed resumes as PDF files.
+Add resume editing, retrieval, and deletion features.
+Improve password security using password hashing.
+Add form validation and stronger authentication controls.
+Add job-description matching and ATS-friendly resume analysis.
+Deploy the application to a cloud hosting platform.
+🔐 Security Notes
+
+This project is intended for learning and development. Before deploying it publicly:
+
+Replace the hardcoded Flask secret key with an environment variable.
+Hash passwords instead of storing them as plain text.
+Disable Flask debug mode in production.
+Add input validation and authorization checks to all relevant routes.
+Avoid committing databases containing personal or sensitive user information.
+👩‍💻 Author
+
+Mrunal
+
+GitHub: @mrunal0701
+
+📄 License
+
+This project is available for educational and personal development purposes. Add a license file if you intend to specify permissions for reuse and distribution.
